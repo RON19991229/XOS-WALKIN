@@ -1,0 +1,253 @@
+-- =========================================================
+-- X FITNESS Walk-in System v2 - Full Database Schema
+-- 
+-- IMPORTANT: This script is DESTRUCTIVE on existing tables.
+-- It DROPS old v1 tables and recreates them.
+-- Run this ONLY if you're OK losing existing test data.
+-- 
+-- For migration without data loss, use migration-v1-to-v2.sql instead.
+-- =========================================================
+
+create extension if not exists "uuid-ossp";
+
+-- Drop old objects (clean slate)
+drop view if exists todays_visits cascade;
+drop table if exists audit_log cascade;
+drop table if exists customer_notes cascade;
+drop table if exists warnings cascade;
+drop table if exists visits cascade;
+drop table if exists customers cascade;
+drop table if exists app_users cascade;
+
+-- =========================================================
+-- Customers
+-- =========================================================
+create table customers (
+  id uuid primary key default uuid_generate_v4(),
+
+  -- Identity
+  nationality text not null check (nationality in ('malaysian', 'foreigner')),
+  ic text unique not null,                    -- IC (12 digits) or passport
+
+  name text not null,                          -- Auto-uppercased on insert
+  phone text not null,                         -- E.g. +60123456789 (with country code)
+  phone_unique text unique generated always as (phone) stored,
+
+  -- Date of birth (parsed from IC for Malaysians, optional for foreigners)
+  dob date,
+
+  -- Emergency contact
+  emergency_relationship text check (
+    emergency_relationship is null or
+    emergency_relationship in ('Friend', 'Partner', 'Father', 'Mother', 'Relative', 'Guardian', 'Sibling', 'Spouse', 'Other')
+  ),
+  emergency_phone text,
+
+  -- Guardian (required if customer was 12-15 at registration)
+  guardian_ic text,
+  guardian_phone text,
+
+  -- Status
+  status text not null default 'active' check (status in ('active', 'banned')),
+  warning_count integer not null default 0 check (warning_count >= 0 and warning_count <= 3),
+  ban_reason text,
+  banned_at timestamptz,
+  banned_by uuid,
+
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index customers_ic_idx on customers(ic);
+create index customers_phone_idx on customers(phone);
+create index customers_emergency_phone_idx on customers(emergency_phone);
+create index customers_name_idx on customers(name);
+create index customers_status_idx on customers(status);
+
+-- =========================================================
+-- Visits
+-- =========================================================
+create table visits (
+  id uuid primary key default uuid_generate_v4(),
+  customer_id uuid references customers(id) on delete cascade,
+  ic text not null,
+  status text not null check (status in ('approved', 'denied_banned', 'denied_age')),
+  visited_at timestamptz not null default now()
+);
+
+create index visits_customer_id_idx on visits(customer_id);
+create index visits_visited_at_idx on visits(visited_at desc);
+create index visits_ic_idx on visits(ic);
+
+-- =========================================================
+-- Warnings
+-- =========================================================
+create table warnings (
+  id uuid primary key default uuid_generate_v4(),
+  customer_id uuid references customers(id) on delete cascade,
+  reason text not null,
+  added_by uuid not null,
+  added_by_name text,
+  created_at timestamptz not null default now()
+);
+
+create index warnings_customer_id_idx on warnings(customer_id);
+
+-- =========================================================
+-- Customer notes
+-- =========================================================
+create table customer_notes (
+  id uuid primary key default uuid_generate_v4(),
+  customer_id uuid references customers(id) on delete cascade,
+  note text not null,
+  added_by uuid not null,
+  added_by_name text,
+  created_at timestamptz not null default now()
+);
+
+create index customer_notes_customer_id_idx on customer_notes(customer_id);
+
+-- =========================================================
+-- App users (staff & admin)
+-- =========================================================
+create table app_users (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  display_name text,
+  role text not null default 'staff' check (role in ('staff', 'admin')),
+  created_at timestamptz not null default now()
+);
+
+-- =========================================================
+-- Audit log
+-- =========================================================
+create table audit_log (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid,
+  user_name text,
+  action text not null,
+  customer_id uuid,
+  details jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index audit_log_created_at_idx on audit_log(created_at desc);
+create index audit_log_customer_id_idx on audit_log(customer_id);
+
+-- =========================================================
+-- Auto-update updated_at trigger
+-- =========================================================
+create or replace function update_updated_at_column()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger update_customers_updated_at
+before update on customers
+for each row execute function update_updated_at_column();
+
+-- =========================================================
+-- Helper function: check if a phone number belongs to a banned customer
+-- =========================================================
+create or replace function is_phone_banned(check_phone text)
+returns boolean as $$
+begin
+  return exists (
+    select 1 from customers
+    where (phone = check_phone or emergency_phone = check_phone)
+      and status = 'banned'
+  );
+end;
+$$ language plpgsql security definer;
+
+-- =========================================================
+-- Helper function: check if any phone is in banned customers
+-- (used to show yellow warning if emergency contact is suspicious)
+-- =========================================================
+create or replace function is_emergency_phone_suspicious(check_phone text)
+returns boolean as $$
+begin
+  if check_phone is null or check_phone = '' then
+    return false;
+  end if;
+  return exists (
+    select 1 from customers
+    where phone = check_phone and status = 'banned'
+  );
+end;
+$$ language plpgsql security definer;
+
+-- =========================================================
+-- Row Level Security
+-- =========================================================
+alter table customers enable row level security;
+alter table visits enable row level security;
+alter table warnings enable row level security;
+alter table customer_notes enable row level security;
+alter table app_users enable row level security;
+alter table audit_log enable row level security;
+
+-- Public (anonymous) policies
+create policy "Public can register"
+on customers for insert to anon
+with check (true);
+
+create policy "Public can read for check-in"
+on customers for select to anon
+using (true);
+
+create policy "Public can log visits"
+on visits for insert to anon
+with check (true);
+
+-- Authenticated user policies
+create policy "Auth full access customers"
+on customers for all to authenticated using (true) with check (true);
+
+create policy "Auth full access visits"
+on visits for all to authenticated using (true) with check (true);
+
+create policy "Auth full access warnings"
+on warnings for all to authenticated using (true) with check (true);
+
+create policy "Auth full access notes"
+on customer_notes for all to authenticated using (true) with check (true);
+
+create policy "Auth read app_users"
+on app_users for select to authenticated using (true);
+
+create policy "Auth audit log"
+on audit_log for all to authenticated using (true) with check (true);
+
+-- =========================================================
+-- View: today's visits
+-- =========================================================
+create or replace view todays_visits as
+select
+  v.id,
+  v.visited_at,
+  v.status as visit_status,
+  c.id as customer_id,
+  c.ic,
+  c.name,
+  c.phone,
+  c.nationality,
+  c.status as customer_status,
+  c.warning_count,
+  c.ban_reason
+from visits v
+left join customers c on v.customer_id = c.id
+where v.visited_at >= date_trunc('day', now())
+order by v.visited_at desc;
+
+-- =========================================================
+-- Enable Realtime for live dashboard
+-- =========================================================
+alter publication supabase_realtime add table customers;
+alter publication supabase_realtime add table visits;
+
+-- Done!
