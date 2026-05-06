@@ -4,12 +4,18 @@
  * TaglineMarquee — vertical rotating marquee that cycles through
  * the same tagline in EN / 中文 / BM, every 3 seconds.
  *
- * Per user spec (mockup v3, option 3):
- *   - Font: Archivo Black for EN + BM (matches WELCOME heading)
- *   - Font: Inter 900 for ZH (Archivo Black has no CJK glyphs)
- *   - Size: 38px display, with yellow-highlighted keyword
- *   - Yellow underline below text + small lang tag at bottom
- *   - 9-second loop = 3 seconds per language, smooth ease-in-out
+ * v2 revision (2026-05-07):
+ *   - Removed language tags (ENGLISH / 中文 / BAHASA MELAYU) — they were
+ *     eating vertical space and the language is obvious from the text itself.
+ *   - Removed yellow underline — same reason.
+ *   - Font size now responsive: clamp(28px, 8.5vw, 38px). On a typical
+ *     ~380px phone this resolves to ~32px, fitting "SELAMANYA PANTAS"
+ *     comfortably without wrapping.
+ *   - Each language gets a clean centered frame with nothing cropped.
+ *
+ * Font:
+ *   - EN + BM use font-display (= Archivo Black, same as WELCOME heading)
+ *   - ZH falls back to Inter 900 because Archivo Black has no CJK glyphs
  */
 export default function TaglineMarquee() {
   return (
@@ -25,7 +31,6 @@ export default function TaglineMarquee() {
               NEXT TIME.
             </>
           }
-          langTag="ENGLISH"
           isChinese={false}
         />
         <MarqueeItem
@@ -36,7 +41,6 @@ export default function TaglineMarquee() {
               <span className="text-accent">下次快速 CHECK-IN</span>
             </>
           }
-          langTag="中文"
           isChinese={true}
         />
         <MarqueeItem
@@ -47,7 +51,6 @@ export default function TaglineMarquee() {
               <span className="text-accent">SELAMANYA PANTAS</span>
             </>
           }
-          langTag="BAHASA MELAYU"
           isChinese={false}
         />
         {/* Duplicate first item for seamless loop */}
@@ -61,7 +64,6 @@ export default function TaglineMarquee() {
               NEXT TIME.
             </>
           }
-          langTag="ENGLISH"
           isChinese={false}
         />
       </div>
@@ -86,30 +88,24 @@ export default function TaglineMarquee() {
 
 function MarqueeItem({
   textNode,
-  langTag,
   isChinese,
 }: {
   textNode: React.ReactNode;
-  langTag: string;
   isChinese: boolean;
 }) {
   // Chinese must use Inter 900 (Archivo Black has no CJK chars)
-  // EN + BM use font-display (= Archivo Black), matching WELCOME heading
+  // EN + BM use font-display (= Archivo Black, matches WELCOME heading)
   const fontClass = isChinese
     ? 'font-sans font-black tracking-tight'
     : 'font-display tracking-tighter';
 
   return (
-    <div className="h-[170px] flex flex-col items-center justify-center px-4 text-center">
+    <div className="h-[170px] flex items-center justify-center px-4 text-center">
       <div
-        className={`${fontClass} text-bone leading-[0.92]`}
-        style={{ fontSize: '38px' }}
+        className={`${fontClass} text-bone leading-[0.95] w-full`}
+        style={{ fontSize: 'clamp(28px, 8.5vw, 38px)' }}
       >
         {textNode}
-      </div>
-      <div className="w-[70px] h-[5px] bg-accent mt-3 mb-1.5" />
-      <div className="font-mono text-[9px] tracking-[0.5em] text-neutral-500">
-        {langTag}
       </div>
     </div>
   );
