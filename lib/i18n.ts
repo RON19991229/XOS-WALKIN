@@ -67,6 +67,8 @@ export const translations = {
     welcomeBack: 'WELCOME BACK',
     confirmCheckin: 'CONFIRM CHECK-IN',
     notYou: 'Not you? Go back',
+    viewTerms: 'VIEW TERMS & CONDITIONS',
+    viewTermsSub: 'Tap to review the gym rules you agreed to',
 
     // Approved
     approved: 'WALK-IN ACCESS APPROVED',
@@ -159,6 +161,8 @@ export const translations = {
     welcomeBack: '欢迎回来',
     confirmCheckin: '确认入场',
     notYou: '不是你？返回',
+    viewTerms: '查看条款与细则',
+    viewTermsSub: '点击查看您同意过的健身房规则',
 
     approved: '入场已通过',
     approvedSub: '请到柜台付款',
@@ -247,6 +251,8 @@ export const translations = {
     welcomeBack: 'SELAMAT KEMBALI',
     confirmCheckin: 'SAHKAN DAFTAR MASUK',
     notYou: 'Bukan anda? Kembali',
+    viewTerms: 'LIHAT TERMA & SYARAT',
+    viewTermsSub: 'Ketik untuk semak peraturan gim yang anda telah setuju',
 
     approved: 'AKSES WALK-IN DILULUSKAN',
     approvedSub: 'Sila ke kaunter untuk pembayaran',

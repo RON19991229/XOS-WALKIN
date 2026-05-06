@@ -1,7 +1,25 @@
-# X FITNESS Walk-in 系统 v2.2
+# X FITNESS Walk-in 系统 v2.2.1
 
 > 替代 Google Form 的健身房 walk-in 入场系统  
 > Next.js 14 + Supabase + Tailwind + Vercel/Netlify
+
+---
+
+## 🆕 v2.2.1 修复 + 新功能 (2026-05-07)
+
+| 项目 | 说明 |
+|------|------|
+| 🐛 **跨日数据 bug 修复** | 原 v1 schema 的 `todays_visits` view 用了 `date_trunc('day', now())`，`now()` 返回 UTC 而非 KL 时区，导致 KL 凌晨 0:00–7:59 时段还在显示昨天的数据。已用 KL 本地时区作切换点 |
+| 🎬 **三语跑马灯标语** | `/checkin` 入口页改用垂直翻页 marquee：每 3 秒切换 EN → 中文 → BM。Archivo Black 38px 大字粗体（中文用 Inter 900 兜底，因 Archivo Black 不带 CJK） |
+| 📐 **WELCOME 缩小** | 从 60px 缩小到 36px（mockup v3 选项 3），让标语成为视觉焦点 |
+| 📄 **Reminders 页 T&C 入口** | 老顾客每次 check-in 都能看到「📄 VIEW TERMS & CONDITIONS」黄色虚线卡片，点击弹出可滚动 modal，三种语言都支持。不强制阅读，但永远可见 |
+
+### v2.2.1 部署步骤
+
+1. **Supabase SQL Editor** 跑 `migration-v2.2.1-hotfix-todays-visits-tz.sql`（修正时区 bug）
+2. 推 GitHub → Vercel 自动部署
+
+> 这一版只是修补 + 视觉优化，**不需要**重跑 v2.2 的 SQL。
 
 ---
 

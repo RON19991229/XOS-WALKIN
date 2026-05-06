@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Lang, t } from '@/lib/i18n';
 import BrandMark from '@/components/BrandMark';
 import LanguageToggle from '@/components/LanguageToggle';
+import TaglineMarquee from '@/components/TaglineMarquee';
 
 export default function CheckinPage() {
   const router = useRouter();
@@ -36,37 +37,35 @@ export default function CheckinPage() {
         <LanguageToggle current={lang} onChange={handleLangChange} />
       </header>
 
-      <section className="flex-1 flex flex-col justify-center px-5 py-6 max-w-md mx-auto w-full">
-        {/* Big logo at top */}
-        <div className="flex justify-center mb-6">
-          <BrandMark size="xl" />
+      <section className="flex-1 flex flex-col px-5 py-6 max-w-md mx-auto w-full">
+        {/* Logo at top */}
+        <div className="flex justify-center mb-4">
+          <BrandMark size="lg" />
         </div>
 
-        <div className="mb-8 text-center">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-3">
+        {/* WELCOME heading (smaller per user request — 36px) */}
+        <div className="mb-2 text-center">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-2">
             // {t(lang, 'walkInCheckIn')}
           </p>
-          <h1 className="font-display text-4xl md:text-5xl leading-[0.85] mb-3">
+          <h1 className="font-display leading-[0.88] tracking-tighter" style={{ fontSize: '36px' }}>
             {t(lang, 'welcome')}
           </h1>
-          <div className="h-1 w-16 bg-accent mx-auto mb-5" />
-          <p className="font-display text-sm md:text-base text-bone leading-snug">
-            {t(lang, 'taglinePrimary')}
-          </p>
-          <p className="font-mono text-[11px] text-neutral-500 mt-1.5">
-            {t(lang, 'taglineSecondary')}
-          </p>
+          <div className="h-1 w-14 bg-accent mx-auto mt-3" />
         </div>
 
-        <p className="font-display text-xs tracking-[0.2em] text-neutral-500 mb-4 text-center">
+        {/* Trilingual rotating marquee */}
+        <TaglineMarquee />
+
+        <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-3 text-center">
           {t(lang, 'chooseNationality')}
         </p>
 
         <button
           onClick={() => choose('malaysian')}
-          className="w-full bg-ink-soft border-2 border-ink-line p-6 mb-3 text-left transition-all hover:border-accent active:translate-y-0.5"
+          className="w-full bg-ink-soft border-2 border-ink-line p-5 mb-3 text-left transition-all hover:border-accent active:translate-y-0.5"
         >
-          <div className="text-3xl mb-1">🇲🇾</div>
+          <div className="text-2xl mb-1">🇲🇾</div>
           <div className="font-display text-2xl mb-1">{t(lang, 'malaysian')}</div>
           <div className="font-mono text-[10px] text-neutral-500 tracking-wider">
             {t(lang, 'icSubtitle')}
@@ -75,9 +74,9 @@ export default function CheckinPage() {
 
         <button
           onClick={() => choose('foreigner')}
-          className="w-full bg-ink-soft border-2 border-ink-line p-6 text-left transition-all hover:border-accent active:translate-y-0.5"
+          className="w-full bg-ink-soft border-2 border-ink-line p-5 text-left transition-all hover:border-accent active:translate-y-0.5"
         >
-          <div className="text-3xl mb-1">🌍</div>
+          <div className="text-2xl mb-1">🌍</div>
           <div className="font-display text-2xl mb-1">{t(lang, 'foreigner')}</div>
           <div className="font-mono text-[10px] text-neutral-500 tracking-wider">
             {t(lang, 'passportSubtitle')}

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
 import { Customer } from '@/lib/types';
 import CheckinHeader from '@/components/CheckinHeader';
+import TermsModal from '@/components/TermsModal';
 
 interface VisitStats {
   totalVisits: number;
@@ -20,6 +21,7 @@ export default function RemindersPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [stats, setStats] = useState<VisitStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -159,7 +161,7 @@ export default function RemindersPage() {
         </div>
 
         {/* Rule 2: NO SLIPPERS */}
-        <div className="border-2 border-ink-line mb-6 overflow-hidden">
+        <div className="border-2 border-ink-line mb-4 overflow-hidden">
           <div className="bg-accent text-ink px-4 py-2 font-display text-xs tracking-widest flex items-center gap-2">
             ⚠ {t(lang, 'rule2')}
           </div>
@@ -174,6 +176,21 @@ export default function RemindersPage() {
             />
           </div>
         </div>
+
+        {/* T&C reminder link — yellow dashed card */}
+        <button
+          type="button"
+          onClick={() => setShowTerms(true)}
+          className="w-full border border-dashed border-accent bg-accent/[0.05] py-3 px-4 mb-6 text-center transition-colors hover:bg-accent/10"
+        >
+          <span className="text-accent text-base">📄</span>
+          <span className="block font-mono text-[11px] tracking-[0.2em] text-accent mt-1">
+            {t(lang, 'viewTerms')}
+          </span>
+          <span className="block text-[11px] text-neutral-400 mt-1">
+            {t(lang, 'viewTermsSub')}
+          </span>
+        </button>
 
         <button
           onClick={handleAcknowledge}
@@ -197,6 +214,9 @@ export default function RemindersPage() {
           </div>
         )}
       </section>
+
+      {/* T&C modal popup */}
+      <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
     </main>
   );
 }
