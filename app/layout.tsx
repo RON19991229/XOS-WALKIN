@@ -14,6 +14,17 @@ import '@fontsource/jetbrains-mono/700.css';
 export const metadata: Metadata = {
   title: 'X FITNESS — Walk-in',
   description: 'Walk-in registration and check-in',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  manifest: '/site.webmanifest',
 };
 
 export const viewport: Viewport = {

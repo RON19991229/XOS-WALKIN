@@ -1,4 +1,19 @@
 /**
+ * Detect gender from a Malaysian IC number.
+ * Convention: last digit odd = male, even = female.
+ * Returns null for non-12-digit inputs (foreigners, malformed IDs).
+ *
+ * NOTE: The DB has the same logic in detect_gender_from_ic() and an
+ * INSERT trigger, so server-side is the source of truth. This helper
+ * exists only for client-side instant preview without a round-trip.
+ */
+export function detectGenderFromIc(ic: string): 'male' | 'female' | null {
+  if (!/^\d{12}$/.test(ic)) return null;
+  const lastDigit = parseInt(ic.charAt(11), 10);
+  return lastDigit % 2 === 1 ? 'male' : 'female';
+}
+
+/**
  * Parse Malaysian IC number (12 digits) to extract date of birth.
  *
  * Format: YYMMDD-PB-####

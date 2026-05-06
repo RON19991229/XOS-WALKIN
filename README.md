@@ -1,7 +1,26 @@
-# X FITNESS Walk-in 系统 v2.2.1
+# X FITNESS Walk-in 系统 v2.3
 
 > 替代 Google Form 的健身房 walk-in 入场系统  
-> Next.js 14 + Supabase + Tailwind + Vercel/Netlify
+> Next.js 14 + Supabase + Tailwind + Vercel
+
+---
+
+## 🆕 v2.3 新功能 (2026-05-07)
+
+| 项目 | 说明 |
+|------|------|
+| ♂♀ **性别自动辨识** | 根据马来西亚 IC 末位数字自动辨别（单数 = 男，双数 = 女）。数据库回填所有现有 Malaysian 顾客；新顾客插入时 trigger 自动填充。外国人默认为空，admin 可在 customer detail 页手动设置（蓝色 ♂ / 粉色 ♀ 切换按钮，跟 membership 一样的 UX） |
+| 🎨 **性别徽章** | TodayList、CustomerList、HistoryClient、CustomerDetail、Import preview 都会显示 ♂ (sky-500) / ♀ (pink-500) 小图标 |
+| 📥 **Excel 导入支持 gender** | 模板新增 `gender` 列。Malaysian 留空会自动从 IC 推断；foreigner 必须显式填写 |
+| 📊 **History CSV 导出** | CSV 增加 Gender 列 |
+| 🌟 **网站 favicon** | 用 X FITNESS logo 制作了完整图标套装：favicon.ico (16/32/48 多分辨率)、icon-32.png、icon-192.png (Android)、icon-512.png (PWA splash)、apple-icon.png (iOS 180×180)。同时加了 web manifest 让网站可"添加到主屏幕"作 PWA 使用 |
+
+### v2.3 部署步骤
+
+1. **Supabase SQL Editor** 跑 `migration-v2.3-gender.sql` — 加 gender 列、辅助函数、自动填充 trigger、回填现有 Malaysian 顾客的 gender、更新 views & RPC 包含 gender 字段
+2. 推 GitHub → Vercel 自动部署
+
+> v2.2.1 的 SQL 已被这次的 migration 覆盖更新（views 重新创建包含 gender），所以**只需**跑 v2.3 即可。如果 v2.2.1 没跑过，v2.3 也包含了相同的时区修复。
 
 ---
 

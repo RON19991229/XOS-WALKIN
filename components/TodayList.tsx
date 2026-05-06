@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime } from '@/lib/utils';
+import GenderBadge from './GenderBadge';
 
 interface VisitRow {
   id: string;
@@ -18,6 +19,7 @@ interface VisitRow {
   warning_count: number;
   ban_reason: string | null;
   membership: 'member' | null;
+  gender: 'male' | 'female' | null;
 }
 
 interface TodayListProps {
@@ -54,7 +56,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
     // Only select the columns the UI actually uses (smaller payload)
     const { data } = await supabase
       .from('todays_visits')
-      .select('id, visited_at, visit_status, customer_id, ic, name, phone, nationality, customer_status, warning_count, ban_reason, membership');
+      .select('id, visited_at, visit_status, customer_id, ic, name, phone, nationality, customer_status, warning_count, ban_reason, membership, gender');
     if (data) setVisits(data as VisitRow[]);
     setLoading(false);
   };
@@ -277,7 +279,8 @@ function VisitRow({
           {visit.membership === 'member' && (
             <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
           )}
-          {nameDisplay}
+          <GenderBadge gender={visit.gender} />
+          <span className="truncate">{nameDisplay}</span>
         </div>
         <div className="font-mono text-[11px] text-neutral-600 truncate">
           {visit.ic} · {visit.phone || '—'}
@@ -290,6 +293,7 @@ function VisitRow({
         {visit.membership === 'member' && (
           <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
         )}
+        <GenderBadge gender={visit.gender} />
         <span className="truncate">{nameDisplay}</span>
       </Link>
       <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-mono text-xs text-neutral-600 truncate">

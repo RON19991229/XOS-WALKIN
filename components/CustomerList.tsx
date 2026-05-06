@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { Customer } from '@/lib/types';
+import GenderBadge from './GenderBadge';
 
 interface CustomerListProps {
   baseHref: '/staff/customers' | '/admin/customers';
@@ -23,7 +24,7 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
     // Only select the columns the list view actually shows
     let query = supabase
       .from('customers')
-      .select('id, name, ic, phone, nationality, status, warning_count, membership')
+      .select('id, name, ic, phone, nationality, status, warning_count, membership, gender')
       .order('created_at', { ascending: false });
     if (filter === 'active') query = query.eq('status', 'active');
     if (filter === 'banned') query = query.eq('status', 'banned');
@@ -130,6 +131,7 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
                       {c.membership === 'member' && (
                         <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
                       )}
+                      <GenderBadge gender={c.gender} />
                       <span className="truncate">{c.name.toUpperCase()}</span>
                     </span>
                     <StatusBadge customer={c} />
@@ -144,6 +146,7 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
                   {c.membership === 'member' && (
                     <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
                   )}
+                  <GenderBadge gender={c.gender} />
                   <span className="truncate">{c.name.toUpperCase()}</span>
                 </div>
                 <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{c.ic}</div>

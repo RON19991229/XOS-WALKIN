@@ -319,6 +319,25 @@ export default function CustomerDetail({
     await fetchAll();
   };
 
+  // Set gender (admin only). Used mainly for foreigners since Malaysian
+  // gender is auto-derived from IC. Pass null to clear.
+  const handleSetGender = async (newValue: 'male' | 'female' | null) => {
+    if (!customer) return;
+    if (newValue === customer.gender) return;
+    setActionLoading(true);
+    const { error } = await supabase
+      .from('customers')
+      .update({ gender: newValue })
+      .eq('id', customerId);
+    if (error) {
+      alert('Failed to update gender: ' + error.message);
+    } else {
+      await logAudit('set_gender', { from: customer.gender, to: newValue });
+    }
+    setActionLoading(false);
+    await fetchAll();
+  };
+
   if (loading) {
     return <div className="dashboard-light min-h-screen px-6 py-8 font-mono">Loading...</div>;
   }
@@ -396,12 +415,28 @@ export default function CustomerDetail({
           {customer.membership === 'member' && (
             <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-success-green text-white">⭐ MEMBER</span>
           )}
+          {customer.gender === 'male' && (
+            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-sky-500 text-white">♂ MALE</span>
+          )}
+          {customer.gender === 'female' && (
+            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-pink-500 text-white">♀ FEMALE</span>
+          )}
         </div>
         <div className="h-1 w-12 bg-accent mb-5" />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <Field label="NATIONALITY" value={customer.nationality === 'malaysian' ? '🇲🇾 Malaysian' : '🌍 Foreigner'} />
           <Field label={customer.nationality === 'malaysian' ? 'IC' : 'PASSPORT'} value={customer.ic} mono />
+          <Field
+            label="GENDER"
+            value={
+              customer.gender === 'male'
+                ? '♂ Male'
+                : customer.gender === 'female'
+                ? '♀ Female'
+                : '—'
+            }
+          />
           <Field label="AGE" value={age !== null ? `${age} years` : '—'} />
           <Field label="PHONE" value={customer.phone} mono />
           <Field label="EMERGENCY RELATIONSHIP" value={customer.emergency_relationship || '—'} />
@@ -439,6 +474,47 @@ export default function CustomerDetail({
           >
             {customer.membership === 'member' ? '— REMOVE MEMBER TAG' : '⭐ MARK AS MEMBER'}
           </button>
+        )}
+
+        {/* Gender — admin can override. Mainly used for foreigners since
+            Malaysian gender is auto-derived from IC. */}
+        {isAdmin && (
+          <div className="inline-flex border-2 border-neutral-300 overflow-hidden">
+            <button
+              onClick={() => handleSetGender('male')}
+              disabled={actionLoading}
+              className={`font-display text-sm tracking-wider px-3 py-2.5 transition-colors ${
+                customer.gender === 'male'
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-white text-neutral-600 hover:bg-sky-50'
+              }`}
+              title="Set as male"
+            >
+              ♂ MALE
+            </button>
+            <button
+              onClick={() => handleSetGender('female')}
+              disabled={actionLoading}
+              className={`font-display text-sm tracking-wider px-3 py-2.5 border-l-2 border-neutral-300 transition-colors ${
+                customer.gender === 'female'
+                  ? 'bg-pink-500 text-white'
+                  : 'bg-white text-neutral-600 hover:bg-pink-50'
+              }`}
+              title="Set as female"
+            >
+              ♀ FEMALE
+            </button>
+            {customer.gender !== null && (
+              <button
+                onClick={() => handleSetGender(null)}
+                disabled={actionLoading}
+                className="font-display text-sm tracking-wider px-3 py-2.5 border-l-2 border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-100"
+                title="Clear gender"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         )}
 
         {!isBanned && customer.warning_count < 3 && (

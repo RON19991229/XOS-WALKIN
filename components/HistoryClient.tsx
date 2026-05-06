@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime } from '@/lib/utils';
+import GenderBadge from './GenderBadge';
 
 interface HistoryVisit {
   id: string;
@@ -17,6 +18,7 @@ interface HistoryVisit {
   customer_status: 'active' | 'banned' | null;
   warning_count: number | null;
   membership: 'member' | null;
+  gender: 'male' | 'female' | null;
 }
 
 interface HistoryDay {
@@ -82,7 +84,7 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
   const handleExportCsv = () => {
     setExporting(true);
     try {
-      const headers = ['Date', 'Time', 'Name', 'IC/Passport', 'Phone', 'Nationality', 'Status', 'Membership', 'Customer Status'];
+      const headers = ['Date', 'Time', 'Name', 'IC/Passport', 'Phone', 'Nationality', 'Gender', 'Status', 'Membership', 'Customer Status'];
       const rows: string[][] = [];
 
       for (const day of filteredHistory) {
@@ -103,6 +105,7 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
             v.ic,
             v.phone || '',
             v.nationality || '',
+            v.gender || '',
             v.visit_status,
             v.membership === 'member' ? 'MEMBER' : '',
             v.customer_status || '',
@@ -293,6 +296,7 @@ function HistoryRow({ visit: v, baseHref }: { visit: HistoryVisit; baseHref: str
           {v.membership === 'member' && (
             <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
           )}
+          <GenderBadge gender={v.gender} />
           {nameDisplay}
         </div>
         <div className="font-mono text-[11px] text-neutral-600 truncate">
@@ -306,6 +310,7 @@ function HistoryRow({ visit: v, baseHref }: { visit: HistoryVisit; baseHref: str
         {v.membership === 'member' && (
           <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
         )}
+        <GenderBadge gender={v.gender} />
         <span className="truncate">{nameDisplay}</span>
       </div>
       <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">

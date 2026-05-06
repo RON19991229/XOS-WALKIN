@@ -42,6 +42,7 @@ interface ParsedRow {
     emergency_relationship: string | null;
     emergency_phone: string | null;
     membership: 'member' | null;
+    gender: 'male' | 'female' | null;
     notes: string | null;
   };
 }
@@ -55,6 +56,7 @@ const TEMPLATE_HEADERS = [
   'emergency_relationship',
   'emergency_phone',
   'membership',
+  'gender',
   'notes',
 ];
 
@@ -158,10 +160,11 @@ export default function ImportClient({ userName }: ImportClientProps) {
         'malaysian',
         '950101025566',
         '+60123456789',
-        '',                          // dob — optional, will be auto-parsed from IC
+        '',                          // dob — optional, auto-parsed from IC
         'Spouse',
         '+60198765432',
-        '',                          // membership — leave blank for walk-in, "member" for member
+        '',                          // membership — blank for walk-in, "member" for member
+        '',                          // gender — leave blank; auto-derived from IC for Malaysians
         'Existing Google Form customer',
       ],
       [
@@ -173,6 +176,7 @@ export default function ImportClient({ userName }: ImportClientProps) {
         'Friend',
         '+60111222333',
         'member',
+        'female',                    // gender required for foreigners (no IC to derive from)
         '',
       ],
     ]);
@@ -230,6 +234,7 @@ export default function ImportClient({ userName }: ImportClientProps) {
         const empRel = (r['emergency_relationship'] || '').trim();
         const empPhoneRaw = (r['emergency_phone'] || '').trim();
         const membershipRaw = (r['membership'] || '').toLowerCase().trim();
+        const genderRaw = (r['gender'] || '').toLowerCase().trim();
         const notes = (r['notes'] || '').trim();
 
         let nationality: 'malaysian' | 'foreigner' | null = null;
@@ -266,6 +271,18 @@ export default function ImportClient({ userName }: ImportClientProps) {
           errors.push(`membership must be "member" or empty (got "${membershipRaw}")`);
         }
 
+        // Gender: explicit value (m/male/f/female) wins. Otherwise auto-derive
+        // for Malaysians from IC last digit. Foreigners stay null if blank.
+        let gender: 'male' | 'female' | null = null;
+        if (genderRaw === 'male' || genderRaw === 'm') gender = 'male';
+        else if (genderRaw === 'female' || genderRaw === 'f') gender = 'female';
+        else if (genderRaw && genderRaw !== '') {
+          errors.push(`gender must be "male"/"female" or empty (got "${genderRaw}")`);
+        } else if (nationality === 'malaysian' && /^\d{12}$/.test(ic)) {
+          // Auto-derive from IC last digit
+          gender = parseInt(ic.charAt(11), 10) % 2 === 1 ? 'male' : 'female';
+        }
+
         let status: RowStatus;
         if (errors.length > 0) status = 'invalid';
         else if (existingIcs.has(ic)) status = 'exists';
@@ -284,6 +301,7 @@ export default function ImportClient({ userName }: ImportClientProps) {
             emergency_relationship: normalizeRelationship(empRel),
             emergency_phone: empPhone,
             membership,
+            gender,
             notes: notes || null,
           },
         };
@@ -329,6 +347,7 @@ export default function ImportClient({ userName }: ImportClientProps) {
         emergency_relationship: r.data.emergency_relationship,
         emergency_phone: r.data.emergency_phone,
         membership: r.data.membership,
+        gender: r.data.gender,
         notes: r.data.notes,
         status: 'active',
       });
@@ -462,6 +481,7 @@ export default function ImportClient({ userName }: ImportClientProps) {
             <li><strong>emergency_relationship</strong> — Friend / Partner / Father / Mother / Relative / Guardian / Sibling / Spouse / Other</li>
             <li><strong>emergency_phone</strong> — Full number with country code</li>
             <li><strong>membership</strong> — &quot;member&quot; or empty (default = walk-in)</li>
+            <li><strong>gender</strong> — &quot;male&quot; / &quot;female&quot; / empty. Auto-derived from IC for Malaysians (last digit odd = male, even = female). Required for foreigners</li>
             <li><strong>notes</strong> — Optional free-form text</li>
           </ul>
         </details>
@@ -542,11 +562,20 @@ export default function ImportClient({ userName }: ImportClientProps) {
                         {r.data.phone || <span className="text-neutral-400">(empty)</span>}
                       </td>
                       <td className="px-2 py-2 align-top">
-                        {r.data.membership === 'member' ? (
-                          <span className="bg-success-green text-white px-1.5 py-0.5 text-[10px]">⭐ MEMBER</span>
-                        ) : (
-                          <span className="text-neutral-400">—</span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {r.data.membership === 'member' && (
+                            <span className="bg-success-green text-white px-1.5 py-0.5 text-[10px] inline-block w-fit">⭐ MEMBER</span>
+                          )}
+                          {r.data.gender === 'male' && (
+                            <span className="bg-sky-500 text-white px-1.5 py-0.5 text-[10px] inline-block w-fit">♂ MALE</span>
+                          )}
+                          {r.data.gender === 'female' && (
+                            <span className="bg-pink-500 text-white px-1.5 py-0.5 text-[10px] inline-block w-fit">♀ FEMALE</span>
+                          )}
+                          {!r.data.membership && !r.data.gender && (
+                            <span className="text-neutral-400">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-2 py-2 align-top">
                         <div>{badge}</div>
