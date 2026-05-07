@@ -374,6 +374,9 @@ export default function RegisterPage() {
             )}
           </button>
         </form>
+
+        {/* Bottom spacer — see /checkin/page.tsx for rationale */}
+        <div className="h-20" aria-hidden="true" />
       </section>
     </main>
   );

@@ -192,27 +192,38 @@ export default function RemindersPage() {
           </span>
         </button>
 
-        <button
-          onClick={handleAcknowledge}
-          disabled={loading}
-          className="btn-primary"
-        >
-          {loading ? (
-            <span className="flex gap-1.5 justify-center">
-              <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-              <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-              <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-            </span>
-          ) : (
-            <>{t(lang, 'acknowledge')} →</>
+        <div className="checkin-cta-wrap">
+          {!loading && (
+            <span className="checkin-cta-finger" aria-hidden="true">👇</span>
           )}
-        </button>
+          <button
+            onClick={handleAcknowledge}
+            disabled={loading}
+            className="btn-checkin-cta"
+          >
+            {loading ? (
+              <span className="flex gap-1.5 justify-center">
+                <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
+                <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
+                <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
+              </span>
+            ) : (
+              <>{t(lang, 'acknowledge')} →</>
+            )}
+          </button>
+        </div>
 
         {errorMsg && (
           <div className="bg-danger text-bone px-4 py-3 mt-4 font-display text-sm tracking-wider animate-shake">
             {errorMsg}
           </div>
         )}
+
+        {/* Bottom spacer — gives users a visual cue that page has ended,
+            and prevents the CTA from being flush with bottom edge.
+            Important UX: when content ends right at screen bottom, users
+            don't realize they need to scroll. */}
+        <div className="h-20" aria-hidden="true" />
       </section>
 
       {/* T&C modal popup */}

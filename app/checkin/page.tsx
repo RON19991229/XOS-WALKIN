@@ -82,6 +82,11 @@ export default function CheckinPage() {
             {t(lang, 'passportSubtitle')}
           </div>
         </button>
+
+        {/* Bottom spacer — prevents the last button from being flush with
+            the screen edge, which was causing customers to think the page
+            had ended (and not realize they could scroll). */}
+        <div className="h-20" aria-hidden="true" />
       </section>
     </main>
   );
