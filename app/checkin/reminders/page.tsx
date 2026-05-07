@@ -8,6 +8,7 @@ import { Lang, t } from '@/lib/i18n';
 import { Customer } from '@/lib/types';
 import CheckinHeader from '@/components/CheckinHeader';
 import TermsModal from '@/components/TermsModal';
+import ScrollHint from '@/components/ScrollHint';
 
 interface VisitStats {
   totalVisits: number;
@@ -228,6 +229,10 @@ export default function RemindersPage() {
 
       {/* T&C modal popup */}
       <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
+
+      {/* Scroll-down hint at bottom of viewport — auto-hides once user
+          reaches the bottom or has scrolled past 200px */}
+      <ScrollHint />
     </main>
   );
 }

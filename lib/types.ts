@@ -24,6 +24,12 @@ export interface Customer {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // Activity stats — maintained by DB trigger (migration v2.5).
+  // Optional: old code that constructs Customer literally won't break,
+  // and sessionStorage-cached customers from before the migration will
+  // still parse cleanly. Both reflect approved visits only.
+  visit_count?: number;
+  last_visit_at?: string | null;
 }
 
 export interface Visit {

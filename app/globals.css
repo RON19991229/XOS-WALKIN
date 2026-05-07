@@ -101,6 +101,128 @@ html, body {
   }
 }
 
+/* ============================================ */
+/* ScrollHint — fade + bouncing arrow at bottom */
+/* of viewport on Reminders page                */
+/* ============================================ */
+.scroll-hint-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(to bottom, transparent, rgba(10, 10, 10, 0.95) 60%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 14px;
+  z-index: 40;
+  /* Fade in/out gracefully */
+  animation: scroll-hint-fade-in 0.4s ease-in;
+}
+
+.scroll-hint-arrow {
+  color: #FFD60A;
+  font-size: 22px;
+  line-height: 1;
+  animation: scroll-hint-bounce 1.2s ease-in-out infinite;
+}
+
+.scroll-hint-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #FFD60A;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+@keyframes scroll-hint-bounce {
+  0%, 100% { opacity: 0.55; transform: translateY(0); }
+  50%      { opacity: 1;    transform: translateY(5px); }
+}
+
+@keyframes scroll-hint-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint-arrow {
+    animation: none;
+    opacity: 1;
+  }
+  .scroll-hint-overlay {
+    animation: none;
+  }
+}
+
+/* ============================================ */
+/* Today dashboard — toast notifications +      */
+/* new-row highlight flash                      */
+/* ============================================ */
+
+/* Container — fixed top-right, stacks toasts vertically */
+.checkin-toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+}
+
+.checkin-toast {
+  background: white;
+  color: #0a0a0a;
+  border: 2px solid #FFD60A;
+  border-left-width: 6px;
+  border-radius: 6px;
+  padding: 12px 16px;
+  min-width: 240px;
+  max-width: 320px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+  animation: checkin-toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.checkin-toast-leaving {
+  animation: checkin-toast-out 0.25s ease-in forwards;
+}
+
+@keyframes checkin-toast-in {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes checkin-toast-out {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(110%); opacity: 0; }
+}
+
+/* New-row highlight flash — overrides bg-* color for 3s with a yellow
+   pulse. Important: this needs to win against bg-white/bg-red-50/etc.
+   set on the row, hence !important. */
+.visit-row-new {
+  animation: visit-row-flash 3s ease-out;
+}
+
+@keyframes visit-row-flash {
+  0%   { background-color: #FFD60A !important; box-shadow: inset 4px 0 0 0 #0a0a0a; }
+  20%  { background-color: #fff7c2 !important; }
+  100% { /* let the original bg-class take over at the end */ }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkin-toast        { animation: none; }
+  .checkin-toast-leaving{ animation: none; opacity: 0; }
+  .visit-row-new        { animation: none; }
+}
+
 .btn-secondary {
   @apply font-display text-base tracking-wider px-6 py-4 bg-transparent text-accent w-full;
   @apply border-2 border-accent;

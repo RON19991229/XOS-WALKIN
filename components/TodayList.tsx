@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime } from '@/lib/utils';
+import { playChime } from '@/lib/chime';
 import GenderBadge from './GenderBadge';
+import CheckinToastStack, { ToastEvent } from './CheckinToast';
 
 interface VisitRow {
   id: string;
@@ -33,6 +35,21 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState('');
 
+  // Toast events currently shown in the top-right corner. Each event
+  // auto-removes after 6 seconds (matches CheckinToast's leave timer).
+  const [toasts, setToasts] = useState<ToastEvent[]>([]);
+
+  // IDs of newly arrived visit rows that should briefly flash yellow.
+  // Auto-cleared after 3 seconds per row.
+  const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
+
+  // Set of visit IDs we've already seen — used to detect what's NEW on
+  // each fetch. Use a ref so it doesn't trigger re-renders.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  // Suppress "new" detection on the very first fetch (otherwise opening
+  // the page would toast every existing row from earlier in the day).
+  const isInitialLoadRef = useRef(true);
+
   const isAdmin = role === 'admin';
 
   useEffect(() => {
@@ -57,7 +74,64 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
     const { data } = await supabase
       .from('todays_visits')
       .select('id, visited_at, visit_status, customer_id, ic, name, phone, nationality, customer_status, warning_count, ban_reason, membership, gender');
-    if (data) setVisits(data as VisitRow[]);
+    if (!data) {
+      setLoading(false);
+      return;
+    }
+
+    const rows = data as VisitRow[];
+
+    // Detect newly arrived visits (any row whose id we haven't seen before).
+    // Skipped on the very first fetch — those rows aren't "new", they're
+    // just history loaded into a fresh page view.
+    if (!isInitialLoadRef.current) {
+      const newRows = rows.filter((r) => !seenIdsRef.current.has(r.id));
+      if (newRows.length > 0) {
+        // Push new toast events. Newest first.
+        const newEvents: ToastEvent[] = newRows.map((r) => ({
+          id: r.id,
+          name: r.name || (r.visit_status === 'denied_age' ? 'Underage attempt' : 'Unknown'),
+          time: formatTime(r.visited_at),
+          status: r.visit_status,
+        }));
+        setToasts((prev) => [...newEvents, ...prev].slice(0, 4)); // cap at 4 visible
+
+        // Play chime — different sound for OK vs denied. If multiple new
+        // events arrive at once, just play once (avoid cacophony).
+        const anyApproved = newRows.some((r) => r.visit_status === 'approved');
+        playChime(anyApproved ? 'ok' : 'denied');
+
+        // Highlight new rows. Schedule per-row clear after 3s.
+        setHighlightIds((prev) => {
+          const next = new Set(prev);
+          newRows.forEach((r) => next.add(r.id));
+          return next;
+        });
+        newRows.forEach((r) => {
+          setTimeout(() => {
+            setHighlightIds((prev) => {
+              if (!prev.has(r.id)) return prev;
+              const next = new Set(prev);
+              next.delete(r.id);
+              return next;
+            });
+          }, 3000);
+        });
+
+        // Schedule toast removal — 6s from now (matches the toast's own
+        // leave animation timer).
+        const idsToRemove = new Set(newEvents.map((e) => e.id));
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((t) => !idsToRemove.has(t.id)));
+        }, 6000);
+      }
+    }
+
+    // Update seen-IDs set to current snapshot.
+    seenIdsRef.current = new Set(rows.map((r) => r.id));
+    isInitialLoadRef.current = false;
+
+    setVisits(rows);
     setLoading(false);
   };
 
@@ -166,10 +240,14 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
               baseHref={baseHref}
               isAdmin={isAdmin}
               onDelete={handleDeleteVisit}
+              isHighlighted={highlightIds.has(v.id)}
             />
           ))}
         </div>
       )}
+
+      {/* Top-right toast notifications for new check-ins */}
+      <CheckinToastStack events={toasts} />
     </div>
   );
 }
@@ -185,12 +263,13 @@ function Stat({ label, value, color }: { label: string; value: number; color?: '
 }
 
 function VisitRow({
-  visit, baseHref, isAdmin, onDelete,
+  visit, baseHref, isAdmin, onDelete, isHighlighted,
 }: {
   visit: VisitRow;
   baseHref: string;
   isAdmin: boolean;
   onDelete: (e: React.MouseEvent, id: string, time: string, name: string) => void;
+  isHighlighted: boolean;
 }) {
   const time = formatTime(visit.visited_at);
   const isBanned = visit.visit_status === 'denied_banned' || visit.customer_status === 'banned';
@@ -200,7 +279,7 @@ function VisitRow({
   let bgClass = 'bg-white hover:bg-yellow-50';
   let statusLabel = '✓ OK';
   let statusClass = 'bg-success text-white';
-  let nameDisplay = visit.name?.toUpperCase() || 'UNKNOWN';
+  let nameDisplay = visit.name?.toUpperCase() || (isDeniedAge ? 'UNDERAGE ATTEMPT' : 'UNKNOWN');
 
   if (isBanned) {
     bgClass = 'bg-red-50 hover:bg-red-100';
@@ -210,7 +289,6 @@ function VisitRow({
     bgClass = 'bg-red-50 hover:bg-red-100';
     statusLabel = '✕ AGE';
     statusClass = 'bg-danger text-white';
-    nameDisplay = nameDisplay === 'UNKNOWN' ? 'UNDERAGE' : nameDisplay;
   } else if (hasWarnings) {
     bgClass = 'bg-yellow-50 hover:bg-yellow-100';
     statusLabel = `⚠ ${visit.warning_count}/3`;
@@ -219,42 +297,25 @@ function VisitRow({
 
   const gridCols = isAdmin ? '90px 1fr 200px 180px 100px 50px' : '90px 1fr 200px 180px 100px';
 
-  // Skip rendering customer link if no customer_id (orphaned underage attempt)
-  if (!visit.customer_id) {
-    return (
-      <div
-        className={`grid items-center px-4 md:px-6 py-2.5 border-b border-neutral-200 ${bgClass}`}
-        style={{ gridTemplateColumns: gridCols }}
-      >
-        <div className="font-mono text-sm font-bold">{time}</div>
-        <div className="font-bold text-sm md:text-base truncate">UNDERAGE ATTEMPT</div>
-        <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{visit.ic}</div>
-        <div className="hidden md:block font-mono text-xs text-neutral-600">—</div>
-        <div className="text-center">
-          <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
-            {statusLabel}
-          </span>
-        </div>
-        {isAdmin && (
-          <button
-            onClick={(e) => onDelete(e, visit.id, visit.visited_at, 'UNDERAGE ATTEMPT')}
-            className="text-danger hover:scale-110 text-base"
-            title="Delete this visit record"
-          >
-            🗑
-          </button>
-        )}
-      </div>
-    );
-  }
+  // Orphaned visits (e.g. underage attempts with no customer record) get
+  // no clickable link, but otherwise render with the same layout as
+  // regular rows so mobile stacking still works.
+  const hasLink = !!visit.customer_id;
+  const customerHref = hasLink ? `${baseHref}/${visit.customer_id}` : null;
+
+  // Mobile and desktop layouts are wrapped in <div>s; clickable cells are
+  // turned into <Link> only when we have a customer_id.
+  // Using a plain wrapper <div> (instead of toggling the outer element
+  // between Link/div) keeps the delete button working in admin mode and
+  // matches HistoryClient's unified-row pattern.
 
   return (
     <div
-      className={`md:grid flex flex-col gap-1 items-center px-4 md:px-6 py-2.5 border-b border-neutral-200 transition-colors ${bgClass}`}
+      className={`md:grid flex flex-col gap-1 items-center px-4 md:px-6 py-2.5 border-b border-neutral-200 transition-colors ${bgClass} ${isHighlighted ? 'visit-row-new' : ''}`}
       style={{ gridTemplateColumns: gridCols }}
     >
       {/* Mobile: stacked layout */}
-      <Link href={`${baseHref}/${visit.customer_id}`} className="md:hidden w-full">
+      <div className="md:hidden w-full">
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-bold">{time}</span>
@@ -272,42 +333,69 @@ function VisitRow({
                 🗑
               </button>
             )}
-            <span className="text-xs text-neutral-400">→</span>
+            {hasLink && <span className="text-xs text-neutral-400">→</span>}
           </div>
         </div>
-        <div className="font-bold text-sm truncate flex items-center gap-1.5">
-          {visit.membership === 'member' && (
-            <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
-          )}
-          <GenderBadge gender={visit.gender} />
-          <span className="truncate">{nameDisplay}</span>
-        </div>
-        <div className="font-mono text-[11px] text-neutral-600 truncate">
-          {visit.ic} · {visit.phone || '—'}
-        </div>
-      </Link>
+        {hasLink ? (
+          <Link href={customerHref!} className="block">
+            <div className="font-bold text-sm truncate flex items-center gap-1.5">
+              {visit.membership === 'member' && (
+                <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
+              )}
+              <GenderBadge gender={visit.gender} />
+              <span className="truncate">{nameDisplay}</span>
+            </div>
+            <div className="font-mono text-[11px] text-neutral-600 truncate">
+              {visit.ic} · {visit.phone || '—'}
+            </div>
+          </Link>
+        ) : (
+          <>
+            <div className="font-bold text-sm truncate">{nameDisplay}</div>
+            <div className="font-mono text-[11px] text-neutral-600 truncate">
+              {visit.ic} · —
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Desktop: table layout */}
-      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-mono text-sm font-bold">{time}</Link>
-      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
-        {visit.membership === 'member' && (
-          <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
-        )}
-        <GenderBadge gender={visit.gender} />
-        <span className="truncate">{nameDisplay}</span>
-      </Link>
-      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
-        {visit.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
-        {visit.ic}
-      </Link>
-      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
-        {visit.phone || '—'}
-      </Link>
-      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block text-center">
-        <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
-          {statusLabel}
-        </span>
-      </Link>
+      {hasLink ? (
+        <>
+          <Link href={customerHref!} className="hidden md:block font-mono text-sm font-bold">{time}</Link>
+          <Link href={customerHref!} className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
+            {visit.membership === 'member' && (
+              <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
+            )}
+            <GenderBadge gender={visit.gender} />
+            <span className="truncate">{nameDisplay}</span>
+          </Link>
+          <Link href={customerHref!} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
+            {visit.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
+            {visit.ic}
+          </Link>
+          <Link href={customerHref!} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
+            {visit.phone || '—'}
+          </Link>
+          <Link href={customerHref!} className="hidden md:block text-center">
+            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
+              {statusLabel}
+            </span>
+          </Link>
+        </>
+      ) : (
+        <>
+          <div className="hidden md:block font-mono text-sm font-bold">{time}</div>
+          <div className="hidden md:block font-bold text-sm truncate">{nameDisplay}</div>
+          <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{visit.ic}</div>
+          <div className="hidden md:block font-mono text-xs text-neutral-600">—</div>
+          <div className="hidden md:block text-center">
+            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
+              {statusLabel}
+            </span>
+          </div>
+        </>
+      )}
       {isAdmin && (
         <div className="hidden md:flex justify-center">
           <button
