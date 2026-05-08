@@ -192,7 +192,9 @@ export default function RemindersPage() {
           <button
             onClick={handleAcknowledge}
             disabled={loading}
-            className="btn-checkin-cta"
+            className={`btn-checkin-cta ${
+              lang === 'zh' ? 'btn-checkin-cta-zh' : ''
+            }`}
           >
             {loading ? (
               <span className="flex gap-1.5 justify-center">

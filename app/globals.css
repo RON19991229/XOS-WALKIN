@@ -43,34 +43,83 @@ html, body {
 /* ============================================ */
 /* Check-in CTA — capsule button with glow      */
 /* Used on Reminders page to make the           */
-/* "I ACKNOWLEDGE — CHECK IN" button obvious    */
+/* "Click to Check In" button obvious           */
+/*                                              */
+/* v2.7: Switched from yellow to success-green  */
+/* (#16c75b — same color as Approved page) so   */
+/* the button visually signals "you're about    */
+/* to be approved." Added breathing animation   */
+/* (gentle scale 1.0 → 1.03) to draw attention  */
+/* without being aggressive. Pauses on press    */
+/* via :active overriding transform.            */
 /* ============================================ */
 .btn-checkin-cta {
-  @apply font-display text-lg md:text-xl tracking-wider px-6 py-6 bg-accent text-ink w-full;
+  @apply font-display text-lg md:text-xl tracking-wider px-6 py-6 text-ink w-full;
+  background: #16c75b;
   border: none;
   border-radius: 9999px;
   cursor: pointer;
   box-shadow:
-    0 0 0 5px rgba(255, 214, 10, 0.15),
-    0 10px 28px rgba(255, 214, 10, 0.35);
+    0 0 0 5px rgba(22, 199, 91, 0.18),
+    0 10px 28px rgba(22, 199, 91, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  animation: btn-checkin-breathe 2s ease-in-out infinite;
+}
+
+@keyframes btn-checkin-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 5px rgba(22, 199, 91, 0.18),
+      0 10px 28px rgba(22, 199, 91, 0.4);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow:
+      0 0 0 8px rgba(22, 199, 91, 0.25),
+      0 14px 36px rgba(22, 199, 91, 0.55);
+  }
 }
 
 .btn-checkin-cta:active {
-  transform: translateY(2px);
+  /* When pressed, snap to "pressed" state and pause the breathing.
+     animation-play-state pauses the keyframes; the explicit transform
+     wins because :active is more specific than the running animation. */
+  animation-play-state: paused;
+  transform: translateY(2px) scale(1);
   box-shadow:
-    0 0 0 5px rgba(255, 214, 10, 0.15),
-    0 4px 12px rgba(255, 214, 10, 0.35);
+    0 0 0 5px rgba(22, 199, 91, 0.18),
+    0 4px 12px rgba(22, 199, 91, 0.4);
 }
 
 .btn-checkin-cta:disabled {
   @apply bg-neutral-700 text-neutral-500 cursor-not-allowed;
+  background: #404040;
   box-shadow: none;
   transform: none;
+  animation: none;
+}
+
+/* Chinese override: Archivo Black has no CJK glyphs, so when the
+   button text is "点击入场" the browser falls back to a system font
+   at REGULAR weight — looks thin compared to EN/BM. We swap to
+   Inter at the heaviest bundled weight (700) so 中文 also renders
+   bold. Same trick as components/TaglineMarquee.tsx. */
+.btn-checkin-cta-zh {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* Respect reduced-motion preference (accessibility) */
+@media (prefers-reduced-motion: reduce) {
+  .btn-checkin-cta {
+    animation: none;
+  }
 }
 
 /* Floating finger above the CTA */

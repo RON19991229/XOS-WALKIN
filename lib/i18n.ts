@@ -30,7 +30,7 @@ export const translations = {
     gymRulesReminder: 'GYM RULES REMINDER',
     rule1: 'RULE #1 — RE-RACK',
     rule2: 'RULE #2 — NO SLIPPERS',
-    acknowledge: 'I ACKNOWLEDGE — CHECK IN',
+    acknowledge: 'CLICK TO CHECK IN',
 
     // Registration
     register: 'REGISTER',
@@ -127,7 +127,7 @@ export const translations = {
     gymRulesReminder: '健身房规则提醒',
     rule1: '规则 #1 — 归位器材',
     rule2: '规则 #2 — 禁止穿拖鞋',
-    acknowledge: '我已知悉 — 入场',
+    acknowledge: '点击入场',
 
     register: '注册',
     firstTime: '首次注册',
@@ -217,7 +217,7 @@ export const translations = {
     gymRulesReminder: 'PERATURAN GIM',
     rule1: 'PERATURAN #1 — RE-RACK',
     rule2: 'PERATURAN #2 — DILARANG SELIPAR',
-    acknowledge: 'SAYA FAHAM — DAFTAR MASUK',
+    acknowledge: 'KLIK UNTUK DAFTAR MASUK',
 
     register: 'DAFTAR',
     firstTime: 'PENDAFTARAN KALI PERTAMA',

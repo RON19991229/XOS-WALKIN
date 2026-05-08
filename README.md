@@ -1,7 +1,26 @@
-# X FITNESS Walk-in 系统 v2.6
+# X FITNESS Walk-in 系统 v2.7
 
 > 替代 Google Form 的健身房 walk-in 入场系统  
 > Next.js 14 + Supabase + Tailwind + Vercel
+
+---
+
+## 🆕 v2.7.0 (2026-05-08)
+
+**Reminders 页 CTA 按钮重新设计**
+
+| 改动 | 详情 |
+|------|------|
+| 🟢 **按钮颜色** | 黄色 `#FFD60A` → 绿色 `#16c75b`（与 Approved 页同色，视觉上预告"按下去 = 通过"） |
+| 📝 **按钮文字** | "I ACKNOWLEDGE — CHECK IN" → **"CLICK TO CHECK IN"**（中：点击入场 / 马来文：KLIK UNTUK DAFTAR MASUK） |
+| ✨ **呼吸动画** | 按钮每 2 秒轻微缩放（1.0 → 1.03）+ glow 同步胀大，"breathing" 效果，吸引注意力但不烦人 |
+| ♿ **无障碍** | `prefers-reduced-motion: reduce` 时自动关动画；按下时 `:active` 暂停动画 |
+
+**只改了 2 个文件**：
+- `app/globals.css` — `.btn-checkin-cta` 样式 + `@keyframes btn-checkin-breathe`
+- `lib/i18n.ts` — `acknowledge` 翻译 key 三种语言全更新
+
+**部署**: 只需 push → Vercel auto-deploy。无 SQL 改动。
 
 ---
 
