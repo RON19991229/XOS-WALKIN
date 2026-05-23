@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lang, t } from '@/lib/i18n';
+import { safeSession, safeLocal } from '@/lib/safe-storage';
 import BrandMark from '@/components/BrandMark';
 import LanguageToggle from '@/components/LanguageToggle';
 import TaglineMarquee from '@/components/TaglineMarquee';
@@ -13,22 +14,22 @@ export default function CheckinPage() {
   const [lang, setLang] = useState<Lang>('en');
 
   useEffect(() => {
-    const saved = localStorage.getItem('xf-lang') as Lang | null;
+    const saved = safeLocal.getItem('xf-lang') as Lang | null;
     if (saved && ['en', 'zh', 'ms'].includes(saved)) setLang(saved);
 
-    sessionStorage.removeItem('xf-customer');
-    sessionStorage.removeItem('xf-ic');
-    sessionStorage.removeItem('xf-success-name');
+    safeSession.removeItem('xf-customer');
+    safeSession.removeItem('xf-ic');
+    safeSession.removeItem('xf-success-name');
   }, []);
 
   const handleLangChange = (l: Lang) => {
     setLang(l);
-    localStorage.setItem('xf-lang', l);
+    safeLocal.setItem('xf-lang', l);
   };
 
   const choose = (nationality: 'malaysian' | 'foreigner') => {
-    sessionStorage.setItem('xf-nationality', nationality);
-    sessionStorage.setItem('xf-lang', lang);
+    safeSession.setItem('xf-nationality', nationality);
+    safeSession.setItem('xf-lang', lang);
     router.push('/checkin/id-input');
   };
 

@@ -11,6 +11,7 @@ import {
   validateMyIC,
   type AgeCategory,
 } from '@/lib/utils';
+import { safeSession } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
 import PhoneInput from '@/components/PhoneInput';
 import TermsContent from '@/components/TermsContent';
@@ -61,18 +62,18 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const savedLang = sessionStorage.getItem('xf-lang') as Lang | null;
+    const savedLang = safeSession.getItem('xf-lang') as Lang | null;
     if (savedLang) setLang(savedLang);
 
-    const nat = sessionStorage.getItem('xf-nationality') as 'malaysian' | 'foreigner' | null;
+    const nat = safeSession.getItem('xf-nationality') as 'malaysian' | 'foreigner' | null;
     if (!nat) { router.replace('/checkin'); return; }
     setNationality(nat);
 
-    const savedIc = sessionStorage.getItem('xf-ic');
+    const savedIc = safeSession.getItem('xf-ic');
     if (!savedIc) { router.replace('/checkin'); return; }
     setIc(savedIc);
 
-    const cat = sessionStorage.getItem('xf-age-category') as AgeCategory | null;
+    const cat = safeSession.getItem('xf-age-category') as AgeCategory | null;
     if (cat) setAgeCategory(cat);
   }, [router]);
 
@@ -156,7 +157,7 @@ export default function RegisterPage() {
           .rpc('lookup_customer_for_checkin', { p_ic: ic });
         const banned = bannedRows && bannedRows.length > 0 ? bannedRows[0] : null;
         if (banned) {
-          sessionStorage.setItem('xf-customer', JSON.stringify(banned));
+          safeSession.setItem('xf-customer', JSON.stringify(banned));
           router.push('/checkin/banned');
           return;
         }
@@ -222,7 +223,7 @@ export default function RegisterPage() {
       return;
     }
 
-    sessionStorage.setItem('xf-customer', JSON.stringify(customer));
+    safeSession.setItem('xf-customer', JSON.stringify(customer));
     router.push('/checkin/reminders');
   };
 

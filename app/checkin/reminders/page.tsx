@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
 import { Customer } from '@/lib/types';
+import { parseTimestamp } from '@/lib/utils';
+import { safeSession, safeJsonParse } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
 import TermsModal from '@/components/TermsModal';
 import ScrollHint from '@/components/ScrollHint';
@@ -27,15 +29,15 @@ export default function RemindersPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    const savedLang = sessionStorage.getItem('xf-lang') as Lang | null;
+    const savedLang = safeSession.getItem('xf-lang') as Lang | null;
     if (savedLang) setLang(savedLang);
 
-    const data = sessionStorage.getItem('xf-customer');
-    if (!data) {
+    const data = safeSession.getItem('xf-customer');
+    const c = safeJsonParse<Customer>(data);
+    if (!c) {
       router.replace('/checkin');
       return;
     }
-    const c: Customer = JSON.parse(data);
     setCustomer(c);
 
     // Fetch visit stats (best-effort, non-blocking).
@@ -91,7 +93,7 @@ export default function RemindersPage() {
       return;
     }
 
-    sessionStorage.setItem('xf-success-name', customer.name);
+    safeSession.setItem('xf-success-name', customer.name);
     router.push('/checkin/approved');
   };
 
@@ -99,7 +101,8 @@ export default function RemindersPage() {
 
   // Format last-visit date in user's language
   const formatLastVisit = (iso: string) => {
-    const d = new Date(iso);
+    const d = parseTimestamp(iso);
+    if (!d) return '';
     const datePart = d.toLocaleDateString(
       lang === 'zh' ? 'zh-CN' : lang === 'ms' ? 'ms-MY' : 'en-MY',
       { year: 'numeric', month: 'short', day: '2-digit', timeZone: 'Asia/Kuala_Lumpur' }

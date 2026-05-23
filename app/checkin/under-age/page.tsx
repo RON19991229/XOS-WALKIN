@@ -3,17 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lang, t } from '@/lib/i18n';
+import { safeSession } from '@/lib/safe-storage';
 
 export default function UnderAgePage() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>('en');
 
   useEffect(() => {
-    const savedLang = sessionStorage.getItem('xf-lang') as Lang | null;
+    const savedLang = safeSession.getItem('xf-lang') as Lang | null;
     if (savedLang) setLang(savedLang);
 
     const timeout = setTimeout(() => {
-      sessionStorage.clear();
+      safeSession.clear();
       router.replace('/checkin');
     }, 15000);
 

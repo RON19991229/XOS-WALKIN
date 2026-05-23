@@ -11,7 +11,9 @@ import {
   calcAge,
   ageCategory,
   digitsOnly,
+  parseTimestamp,
 } from '@/lib/utils';
+import { safeSession, safeLocal } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
 import ScrollHint from '@/components/ScrollHint';
 
@@ -25,10 +27,10 @@ export default function IdInputPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const savedLang = sessionStorage.getItem('xf-lang') as Lang | null;
+    const savedLang = safeSession.getItem('xf-lang') as Lang | null;
     if (savedLang) setLang(savedLang);
 
-    const nat = sessionStorage.getItem('xf-nationality') as 'malaysian' | 'foreigner' | null;
+    const nat = safeSession.getItem('xf-nationality') as 'malaysian' | 'foreigner' | null;
     if (!nat) {
       router.replace('/checkin');
       return;
@@ -85,21 +87,25 @@ export default function IdInputPage() {
       .limit(1);
 
     if (recentAnyVisits && recentAnyVisits.length > 0) {
-      const lastVisit = new Date(recentAnyVisits[0].visited_at);
-      const now = new Date();
-      const minutesSince = (now.getTime() - lastVisit.getTime()) / 60000;
+      const lastVisit = parseTimestamp(recentAnyVisits[0].visited_at);
+      // If the timestamp couldn't be parsed (shouldn't happen now), skip the
+      // client cooldown — the DB trigger still enforces it server-side.
+      if (lastVisit) {
+        const now = new Date();
+        const minutesSince = (now.getTime() - lastVisit.getTime()) / 60000;
 
-      if (minutesSince < 30) {
-        const remaining = Math.ceil(30 - minutesSince);
-        setLoading(false);
-        setError(
-          lang === 'zh'
-            ? `您 ${Math.floor(minutesSince)} 分钟前已尝试入场。请等候 ${remaining} 分钟后再试。`
-            : lang === 'ms'
-            ? `Anda telah cuba daftar masuk ${Math.floor(minutesSince)} minit yang lalu. Sila tunggu ${remaining} minit lagi.`
-            : `You attempted check-in ${Math.floor(minutesSince)} minute(s) ago. Please wait ${remaining} more minutes before trying again.`
-        );
-        return;
+        if (minutesSince < 30) {
+          const remaining = Math.ceil(30 - minutesSince);
+          setLoading(false);
+          setError(
+            lang === 'zh'
+              ? `您 ${Math.floor(minutesSince)} 分钟前已尝试入场。请等候 ${remaining} 分钟后再试。`
+              : lang === 'ms'
+              ? `Anda telah cuba daftar masuk ${Math.floor(minutesSince)} minit yang lalu. Sila tunggu ${remaining} minit lagi.`
+              : `You attempted check-in ${Math.floor(minutesSince)} minute(s) ago. Please wait ${remaining} more minutes before trying again.`
+          );
+          return;
+        }
       }
     }
 
@@ -120,7 +126,7 @@ export default function IdInputPage() {
 
     const customer = customers && customers.length > 0 ? customers[0] : null;
 
-    sessionStorage.setItem('xf-ic', id);
+    safeSession.setItem('xf-ic', id);
 
     // Age check ONLY for Malaysians (foreigners skip)
     if (nationality === 'malaysian') {
@@ -142,28 +148,28 @@ export default function IdInputPage() {
             status: 'denied_age',
           });
         }
-        sessionStorage.setItem('xf-age', String(age));
+        safeSession.setItem('xf-age', String(age));
         router.push('/checkin/under-age');
         return;
       }
 
-      sessionStorage.setItem('xf-age', String(age));
-      sessionStorage.setItem('xf-age-category', cat);
+      safeSession.setItem('xf-age', String(age));
+      safeSession.setItem('xf-age-category', cat);
     } else {
       // Foreigner: skip age category, mark as 16+
-      sessionStorage.setItem('xf-age-category', '16-plus');
+      safeSession.setItem('xf-age-category', '16-plus');
     }
 
     // Banned check
     if (customer && customer.status === 'banned') {
-      sessionStorage.setItem('xf-customer', JSON.stringify(customer));
+      safeSession.setItem('xf-customer', JSON.stringify(customer));
       router.push('/checkin/banned');
       return;
     }
 
     // Existing active customer → reminders → check-in
     if (customer) {
-      sessionStorage.setItem('xf-customer', JSON.stringify(customer));
+      safeSession.setItem('xf-customer', JSON.stringify(customer));
       router.push('/checkin/reminders');
       return;
     }
@@ -186,7 +192,7 @@ export default function IdInputPage() {
     <main className="min-h-screen flex flex-col bg-ink">
       <CheckinHeader
         lang={lang}
-        onLangChange={(l) => { setLang(l); localStorage.setItem('xf-lang', l); }}
+        onLangChange={(l) => { setLang(l); safeLocal.setItem('xf-lang', l); }}
       />
 
       <section className="flex-1 flex flex-col justify-center px-5 py-10 max-w-md mx-auto w-full">

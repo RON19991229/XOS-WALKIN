@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
 import { Customer } from '@/lib/types';
+import { safeSession, safeJsonParse } from '@/lib/safe-storage';
 
 export default function BannedPage() {
   const router = useRouter();
@@ -13,16 +14,16 @@ export default function BannedPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
-    const savedLang = sessionStorage.getItem('xf-lang') as Lang | null;
+    const savedLang = safeSession.getItem('xf-lang') as Lang | null;
     if (savedLang) setLang(savedLang);
 
-    const data = sessionStorage.getItem('xf-customer');
-    if (!data) {
+    const data = safeSession.getItem('xf-customer');
+    const c = safeJsonParse<Customer>(data);
+    if (!c) {
       router.replace('/checkin');
       return;
     }
 
-    const c: Customer = JSON.parse(data);
     setCustomer(c);
 
     // Log denied attempt
@@ -36,7 +37,7 @@ export default function BannedPage() {
       .then(() => {});
 
     const timeout = setTimeout(() => {
-      sessionStorage.clear();
+      safeSession.clear();
       router.replace('/checkin');
     }, 20000);
 

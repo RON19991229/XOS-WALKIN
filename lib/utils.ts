@@ -454,10 +454,43 @@ export function validatePassport(passport: string): string | null {
 }
 
 /**
+ * Parse a timestamp string into a Date, safely on iOS/WebKit.
+ *
+ * WHY: iOS Safari/WebKit (and therefore EVERY browser on iPhone, including
+ * "Chrome") follows the ECMAScript spec strictly and only reliably parses
+ * ISO-8601 strings that use the "T" separator. Postgres / PostgREST can hand
+ * back timestamps with a SPACE separator and a short "+00" offset, e.g.
+ *   "2026-05-22 13:37:00.123456+00"
+ * Desktop Chrome (V8) parses that fine; iOS returns `Invalid Date`. This made
+ * the 30-minute cooldown check silently fail on iPhones (NaN comparison).
+ *
+ * This normalises the common Postgres shapes into ISO before constructing the
+ * Date, and returns null if the result is still invalid (caller decides what
+ * to do — never throws).
+ */
+export function parseTimestamp(input: string | Date | null | undefined): Date | null {
+  if (input == null) return null;
+  if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+
+  let s = input.trim();
+  // "2026-05-22 13:37:00+00" → "2026-05-22T13:37:00+00"
+  s = s.replace(' ', 'T');
+  // bare "+00" / "-07" offset → "+00:00" / "-07:00" (WebKit wants HH:MM)
+  s = s.replace(/([+-]\d{2})$/, '$1:00');
+
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d;
+
+  // Last resort: try the raw input as-is (handles formats we didn't expect).
+  const raw = new Date(input);
+  return isNaN(raw.getTime()) ? null : raw;
+}
+
+/**
  * Format timestamp to HH:MM:SS in Asia/Kuala_Lumpur timezone.
  */
 export function formatTime(iso: string | Date): string {
-  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  const d = typeof iso === 'string' ? (parseTimestamp(iso) ?? new Date(iso)) : iso;
   return d.toLocaleTimeString('en-MY', {
     hour: '2-digit',
     minute: '2-digit',
@@ -468,7 +501,7 @@ export function formatTime(iso: string | Date): string {
 }
 
 export function formatDateTime(iso: string | Date): string {
-  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  const d = typeof iso === 'string' ? (parseTimestamp(iso) ?? new Date(iso)) : iso;
   return d.toLocaleString('en-MY', {
     weekday: 'short',
     day: '2-digit',

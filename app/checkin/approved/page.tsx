@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lang, t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils';
+import { safeSession } from '@/lib/safe-storage';
 
 /**
  * APPROVED — Full-screen green page (per user request 2026-05-06).
@@ -21,8 +22,8 @@ export default function ApprovedPage() {
   const [now, setNow] = useState('');
 
   useEffect(() => {
-    const savedLang = sessionStorage.getItem('xf-lang') as Lang | null;
-    const savedName = sessionStorage.getItem('xf-success-name');
+    const savedLang = safeSession.getItem('xf-lang') as Lang | null;
+    const savedName = safeSession.getItem('xf-success-name');
 
     if (!savedName) {
       router.replace('/checkin');
@@ -33,7 +34,7 @@ export default function ApprovedPage() {
     setNow(formatDateTime(new Date()));
 
     const timeout = setTimeout(() => {
-      sessionStorage.clear();
+      safeSession.clear();
       router.replace('/checkin');
     }, 12000);
 
