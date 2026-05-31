@@ -398,3 +398,18 @@ html, body {
 }
 
 /* (Removed stripes-danger - no longer used) */
+
+/* ============================================================
+   Privacy mode — blur sensitive Today live-feed content so
+   customers near the counter can't read names / IC / phone.
+   Toggled by the eye button (left of TOTAL). The new-checkin
+   toast pop-up is rendered outside this wrapper and is never
+   blurred. select-none + the blur make text unreadable.
+   ============================================================ */
+.privacy-blur {
+  filter: blur(8px);
+  -webkit-filter: blur(8px);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: filter 0.25s ease;
+}

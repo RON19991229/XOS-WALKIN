@@ -52,6 +52,36 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
 
   const isAdmin = role === 'admin';
 
+  // Privacy mode — blurs sensitive feed content (names, IC, phone, gender,
+  // status, counts) so customers near the counter can't read the screen.
+  // Persists across refresh + realtime updates via sessionStorage. The
+  // new-checkin toast pop-up is rendered outside the blur wrapper, so it
+  // stays readable even while privacy mode is on.
+  const [privacy, setPrivacy] = useState(false);
+
+  // Load persisted privacy state on mount (sessionStorage only — resets
+  // when the browser tab is fully closed, which is the desired behaviour
+  // for a shared counter terminal).
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('xf-privacy') === '1') setPrivacy(true);
+    } catch {
+      /* sessionStorage unavailable (private mode / SSR) — ignore */
+    }
+  }, []);
+
+  const togglePrivacy = () => {
+    setPrivacy((prev) => {
+      const next = !prev;
+      try {
+        sessionStorage.setItem('xf-privacy', next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
     const tick = () => {
       const d = new Date();
@@ -205,10 +235,24 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
               {now}
             </p>
           </div>
-          <div className="flex gap-3">
-            <Stat label="TOTAL" value={stats.total} />
-            <Stat label="OK" value={stats.approved} color="green" />
-            <Stat label="DENIED" value={stats.denied} color="red" />
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={togglePrivacy}
+              className={`w-11 h-11 rounded-full grid place-items-center text-xl leading-none border-2 transition-colors flex-shrink-0 ${
+                privacy
+                  ? 'bg-ink border-ink'
+                  : 'bg-neutral-50 border-neutral-200 hover:border-neutral-400'
+              }`}
+              title={privacy ? 'Privacy ON — tap to show' : 'Privacy OFF — tap to hide'}
+              aria-pressed={privacy}
+            >
+              <span>{privacy ? '🙈' : '👁️'}</span>
+            </button>
+            <div className={`flex gap-3 ${privacy ? 'privacy-blur' : ''}`}>
+              <Stat label="TOTAL" value={stats.total} />
+              <Stat label="OK" value={stats.approved} color="green" />
+              <Stat label="DENIED" value={stats.denied} color="red" />
+            </div>
           </div>
         </div>
       </div>
@@ -241,6 +285,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
               isAdmin={isAdmin}
               onDelete={handleDeleteVisit}
               isHighlighted={highlightIds.has(v.id)}
+              privacy={privacy}
             />
           ))}
         </div>
@@ -263,13 +308,14 @@ function Stat({ label, value, color }: { label: string; value: number; color?: '
 }
 
 function VisitRow({
-  visit, baseHref, isAdmin, onDelete, isHighlighted,
+  visit, baseHref, isAdmin, onDelete, isHighlighted, privacy,
 }: {
   visit: VisitRow;
   baseHref: string;
   isAdmin: boolean;
   onDelete: (e: React.MouseEvent, id: string, time: string, name: string) => void;
   isHighlighted: boolean;
+  privacy: boolean;
 }) {
   const time = formatTime(visit.visited_at);
   const isBanned = visit.visit_status === 'denied_banned' || visit.customer_status === 'banned';
@@ -297,6 +343,9 @@ function VisitRow({
 
   const gridCols = isAdmin ? '90px 1fr 200px 180px 100px 50px' : '90px 1fr 200px 180px 100px';
 
+  // Privacy blur class applied to sensitive cells only (not trash/arrow icons).
+  const pc = privacy ? 'privacy-blur' : '';
+
   // Orphaned visits (e.g. underage attempts with no customer record) get
   // no clickable link, but otherwise render with the same layout as
   // regular rows so mobile stacking still works.
@@ -317,7 +366,7 @@ function VisitRow({
       {/* Mobile: stacked layout */}
       <div className="md:hidden w-full">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${pc}`}>
             <span className="font-mono text-sm font-bold">{time}</span>
             <span className={`font-display text-[10px] tracking-widest px-2 py-0.5 ${statusClass}`}>
               {statusLabel}
@@ -338,21 +387,21 @@ function VisitRow({
         </div>
         {hasLink ? (
           <Link href={customerHref!} className="block">
-            <div className="font-bold text-sm truncate flex items-center gap-1.5">
+            <div className={`font-bold text-sm truncate flex items-center gap-1.5 ${pc}`}>
               {visit.membership === 'member' && (
                 <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
               )}
               <GenderBadge gender={visit.gender} />
               <span className="truncate">{nameDisplay}</span>
             </div>
-            <div className="font-mono text-[11px] text-neutral-600 truncate">
+            <div className={`font-mono text-[11px] text-neutral-600 truncate ${pc}`}>
               {visit.ic} · {visit.phone || '—'}
             </div>
           </Link>
         ) : (
           <>
-            <div className="font-bold text-sm truncate">{nameDisplay}</div>
-            <div className="font-mono text-[11px] text-neutral-600 truncate">
+            <div className={`font-bold text-sm truncate ${pc}`}>{nameDisplay}</div>
+            <div className={`font-mono text-[11px] text-neutral-600 truncate ${pc}`}>
               {visit.ic} · —
             </div>
           </>
@@ -362,35 +411,35 @@ function VisitRow({
       {/* Desktop: table layout */}
       {hasLink ? (
         <>
-          <Link href={customerHref!} className="hidden md:block font-mono text-sm font-bold">{time}</Link>
-          <Link href={customerHref!} className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
+          <Link href={customerHref!} className={`hidden md:block font-mono text-sm font-bold ${pc}`}>{time}</Link>
+          <Link href={customerHref!} className={`hidden md:flex items-center gap-1.5 font-bold text-sm truncate ${pc}`}>
             {visit.membership === 'member' && (
               <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
             )}
             <GenderBadge gender={visit.gender} />
             <span className="truncate">{nameDisplay}</span>
           </Link>
-          <Link href={customerHref!} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
+          <Link href={customerHref!} className={`hidden md:block font-mono text-xs text-neutral-600 truncate ${pc}`}>
             {visit.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
             {visit.ic}
           </Link>
-          <Link href={customerHref!} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
+          <Link href={customerHref!} className={`hidden md:block font-mono text-xs text-neutral-600 truncate ${pc}`}>
             {visit.phone || '—'}
           </Link>
           <Link href={customerHref!} className="hidden md:block text-center">
-            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
+            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass} ${pc}`}>
               {statusLabel}
             </span>
           </Link>
         </>
       ) : (
         <>
-          <div className="hidden md:block font-mono text-sm font-bold">{time}</div>
-          <div className="hidden md:block font-bold text-sm truncate">{nameDisplay}</div>
-          <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{visit.ic}</div>
-          <div className="hidden md:block font-mono text-xs text-neutral-600">—</div>
+          <div className={`hidden md:block font-mono text-sm font-bold ${pc}`}>{time}</div>
+          <div className={`hidden md:block font-bold text-sm truncate ${pc}`}>{nameDisplay}</div>
+          <div className={`hidden md:block font-mono text-xs text-neutral-600 truncate ${pc}`}>{visit.ic}</div>
+          <div className={`hidden md:block font-mono text-xs text-neutral-600 ${pc}`}>—</div>
           <div className="hidden md:block text-center">
-            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
+            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass} ${pc}`}>
               {statusLabel}
             </span>
           </div>
