@@ -38,23 +38,67 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
 
   const isAdmin = role === 'admin';
 
-  // Fetch + DB-side status filter only. Type/activity/sort are applied
-  // client-side because they all depend on visit_count / last_visit_at
-  // which are already on the row, and there are at most ~1000 rows.
-  // (If the customer base grows >5000 we'd push these to the DB query.)
+  // Fetch ALL customers via pagination. Supabase's PostgREST gateway caps
+  // every response at 1000 rows (project-level max-rows), regardless of any
+  // .limit() we set. Once the customer base passed 1000, a single request
+  // silently returned only the first 1000 rows (oldest, since there was no
+  // ORDER BY), so the newest customers never appeared in the list.
+  //
+  // Fix: page through the table in 1000-row chunks with a stable sort
+  // (created_at desc, then id as a tie-breaker so rows can't be skipped or
+  // duplicated across page boundaries), accumulating until a short page
+  // signals the end. Status filter stays DB-side as before.
+  const PAGE_SIZE = 1000;
+  const MAX_PAGES = 50; // hard safety cap (50k rows) to prevent any runaway loop
+
   const fetchCustomers = async () => {
     setLoading(true);
-    let query = supabase
-      .from('customers')
-      .select('id, name, ic, phone, nationality, status, warning_count, membership, gender, visit_count, last_visit_at, created_at')
-      .limit(2000);
 
-    if (statusFilter === 'active') query = query.eq('status', 'active');
-    if (statusFilter === 'banned') query = query.eq('status', 'banned');
-    if (statusFilter === 'warned') query = query.gt('warning_count', 0);
+    const all: Customer[] = [];
+    let page = 0;
+    let reachedEnd = false;
+    let failed = false;
 
-    const { data } = await query;
-    if (data) setCustomers(data as Customer[]);
+    while (!reachedEnd && page < MAX_PAGES) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
+        .from('customers')
+        .select('id, name, ic, phone, nationality, status, warning_count, membership, gender, visit_count, last_visit_at, created_at')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to);
+
+      if (statusFilter === 'active') query = query.eq('status', 'active');
+      if (statusFilter === 'banned') query = query.eq('status', 'banned');
+      if (statusFilter === 'warned') query = query.gt('warning_count', 0);
+
+      const { data, error } = await query;
+
+      if (error) {
+        // Stop paginating on error. Keep whatever we already fetched so the
+        // list doesn't blank out; surface the problem instead of silently
+        // showing a truncated list.
+        console.error('fetchCustomers page', page, 'failed:', error.message);
+        failed = true;
+        break;
+      }
+
+      const rows = (data ?? []) as Customer[];
+      all.push(...rows);
+
+      // A page shorter than PAGE_SIZE means we've reached the last page.
+      if (rows.length < PAGE_SIZE) reachedEnd = true;
+      page += 1;
+    }
+
+    // Only replace the list if we successfully read at least the first page,
+    // OR we got a clean (possibly empty) result. On a hard failure mid-way we
+    // still show what we have rather than wiping the screen.
+    if (!failed || all.length > 0) {
+      setCustomers(all);
+    }
     setLoading(false);
   };
 
