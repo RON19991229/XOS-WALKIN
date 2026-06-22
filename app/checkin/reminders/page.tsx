@@ -152,6 +152,12 @@ export default function RemindersPage() {
           <div className="h-1 w-16 bg-accent" />
         </div>
 
+        {/* IMPORTANT RULES — section label grouping the two core rules
+            (RE-RACK + NO SLIPPERS). Added v2.8.1. */}
+        <div className="inline-block bg-accent/10 border border-accent text-accent font-mono text-[10px] tracking-[0.25em] px-2.5 py-1 mb-3">
+          ▎ {t(lang, 'importantRules')}
+        </div>
+
         {/* Rule 1: RE-RACK */}
         <div className="border-2 border-ink-line mb-4 overflow-hidden">
           <div className="bg-accent text-ink px-4 py-2 font-display text-xs tracking-widest flex items-center gap-2">
@@ -182,6 +188,48 @@ export default function RemindersPage() {
               height={250}
               className="w-full h-auto"
               priority
+            />
+          </div>
+        </div>
+
+        {/* DO & DON'T — full visual etiquette guide (1080×1080 graphics).
+            Added v2.8.1. The images are self-contained (green DO / red
+            DON'T headers baked in), so no yellow rule-bar is added; they
+            sit in the same bordered frame as the rules above for visual
+            consistency. Not marked `priority` (below the fold). */}
+        <div className="mt-3 mb-3">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-1.5">
+            // {t(lang, 'doAndDont')}
+          </p>
+          <h2 className="font-display text-2xl leading-none">
+            <span className="text-success-green">DO</span>
+            <span className="text-neutral-500"> &amp; </span>
+            <span className="text-danger">DON&apos;T</span>
+          </h2>
+        </div>
+
+        {/* DO */}
+        <div className="border-2 border-ink-line mb-4 overflow-hidden">
+          <div className="bg-black">
+            <Image
+              src="/do.png"
+              alt="DO — gym etiquette"
+              width={1080}
+              height={1080}
+              className="w-full h-auto"
+            />
+          </div>
+        </div>
+
+        {/* DON'T */}
+        <div className="border-2 border-ink-line mb-5 overflow-hidden">
+          <div className="bg-black">
+            <Image
+              src="/dont.png"
+              alt="DON'T — gym etiquette"
+              width={1080}
+              height={1080}
+              className="w-full h-auto"
             />
           </div>
         </div>

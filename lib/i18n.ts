@@ -28,8 +28,10 @@ export const translations = {
     // Reminders
     beforeYouTrain: 'BEFORE YOU TRAIN',
     gymRulesReminder: 'GYM RULES REMINDER',
+    importantRules: 'IMPORTANT RULES',
     rule1: 'RULE #1 — RE-RACK',
     rule2: 'RULE #2 — NO SLIPPERS',
+    doAndDont: "DO & DON'T",
     acknowledge: 'CLICK TO CHECK IN',
 
     // Registration
@@ -125,8 +127,10 @@ export const translations = {
 
     beforeYouTrain: '训练前请阅读',
     gymRulesReminder: '健身房规则提醒',
+    importantRules: '重要规则',
     rule1: '规则 #1 — 归位器材',
     rule2: '规则 #2 — 禁止穿拖鞋',
+    doAndDont: '应做与禁止',
     acknowledge: '点击入场',
 
     register: '注册',
@@ -215,8 +219,10 @@ export const translations = {
 
     beforeYouTrain: 'SEBELUM ANDA BERSENAM',
     gymRulesReminder: 'PERATURAN GIM',
+    importantRules: 'PERATURAN PENTING',
     rule1: 'PERATURAN #1 — RE-RACK',
     rule2: 'PERATURAN #2 — DILARANG SELIPAR',
+    doAndDont: 'BOLEH & DILARANG',
     acknowledge: 'KLIK UNTUK DAFTAR MASUK',
 
     register: 'DAFTAR',
