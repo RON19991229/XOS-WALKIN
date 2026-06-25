@@ -22,6 +22,10 @@ export interface Customer {
   banned_at: string | null;
   banned_by: string | null;
   notes: string | null;
+  // Attention List photo (migration v2.9). Object path inside the private
+  // 'attention-photos' storage bucket, e.g. "<uuid>.jpg". Null = no photo.
+  // Optional so old cached customer objects still parse cleanly.
+  photo_path?: string | null;
   created_at: string;
   updated_at: string;
   // Activity stats — maintained by DB trigger (migration v2.5).
